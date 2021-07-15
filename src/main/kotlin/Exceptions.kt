@@ -1,0 +1,1 @@
+class MalformedInputException(message: String) : Exception(message)

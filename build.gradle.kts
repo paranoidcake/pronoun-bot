@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.5.20"
+    kotlin("plugin.serialization") version "1.5.20"
     id("com.github.johnrengelman.shadow") version "6.1.0"
     application
 }
@@ -24,6 +25,12 @@ dependencies {
 
     // Clikt - Command line parsing
     implementation("com.github.ajalt.clikt:clikt:3.0.1")
+
+    // kaml - Yaml file serialisation
+    implementation("com.charleskorn.kaml:kaml:0.34.0")
+
+    // skrape.it - Web scraper
+    implementation("it.skrape:skrapeit:1.1.4")
 }
 
 tasks.withType<KotlinCompile>() {
