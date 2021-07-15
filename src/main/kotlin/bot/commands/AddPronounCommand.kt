@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.toList
 
 class AddPronounCommand(private val bot: PronounBot): Command {
     @OptIn(KordPreview::class)
-    override suspend fun runOn(interaction: Interaction) {
+    override suspend fun runOn(interaction: Interaction): Unit = with(bot) {
         val ack = interaction.acknowledgeEphemeral()
 
         val target =

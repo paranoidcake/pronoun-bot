@@ -1,3 +1,4 @@
+import bot.PronounBot
 import com.charleskorn.kaml.Yaml
 import it.skrape.core.htmlDocument
 import it.skrape.fetcher.HttpFetcher
@@ -14,6 +15,13 @@ data class Webpage(var httpStatusCode: Int = 0,
                    var httpStatusMessage: String = "",
                    var allHeadings: List<String> = listOf(),
 )
+
+/**
+ * Resolves and finds user pronouns
+ */
+//class Pronouns(private val bot: PronounBot) {
+//
+//}
 
 @Serializable
 class PronounDictionary {
@@ -68,11 +76,10 @@ class PronounDictionary {
                     listOf(result)
                 }
             }
-            // TODO: 4 slash separated pronouns can be in one of two orders, needs a different solution
-//            4 -> {
-//                val (subjectPronoun, objectPronoun, possessiveDeterminer, possessivePronoun) = nouns
-//                val (subjectPronoun, objectPronoun, possessiveDeterminer, reflexivePronoun) = nouns
-//            }
+            4 -> {
+                val (subjectPronoun, objectPronoun, possessiveDeterminer, reflexivePronoun) = nouns
+                get(subjectPronoun, objectPronoun, possessiveDeterminer, reflexivePronoun)
+            }
             3 -> {
                 val (subjectPronoun, objectPronoun, possessiveDeterminer) = nouns
 
@@ -99,6 +106,20 @@ class PronounDictionary {
             it.possessivePronoun.lowercase() == possessivePronoun.lowercase()
                 &&
             it.reflexivePronoun.lowercase() == reflexivePronoun.lowercase()
+        }
+    }
+
+    fun get(subjectPronoun: String, objectPronoun: String, possessiveDeterminer: String, reflexivePronoun: String): List<PronounEntry>? {
+        return set.filter {
+            it.subjectPronoun.lowercase() == subjectPronoun.lowercase()
+                    &&
+                    it.objectPronoun.lowercase() == objectPronoun.lowercase()
+                    &&
+                    it.possessiveDeterminer.lowercase() == possessiveDeterminer.lowercase()
+                    &&
+                    it.reflexivePronoun.lowercase() == reflexivePronoun.lowercase()
+        }.ifEmpty {
+            null
         }
     }
 

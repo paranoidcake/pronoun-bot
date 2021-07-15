@@ -7,9 +7,9 @@ import dev.kord.core.entity.interaction.Interaction
 
 class TrackCommand(private val bot: PronounBot): Command {
     @OptIn(KordPreview::class)
-    override suspend fun runOn(interaction: Interaction) {
-        bot.trackedChannels[interaction.data.guildId.value!!] = interaction.data.channelId
-        bot.serializeSettings()
+    override suspend fun runOn(interaction: Interaction): Unit = with(bot) {
+        trackedChannels[interaction.data.guildId.value!!] = interaction.data.channelId
+        serializeSettings()
         interaction.acknowledgeEphemeral().followUpEphemeral { content = "Now tracking ${interaction.channel.mention}" }
     }
 }

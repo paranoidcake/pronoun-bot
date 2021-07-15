@@ -37,7 +37,7 @@ class Cli: CliktCommand() {
                         subCommand("scrape-pronouns", "Scrape pronouns from https://pronoun-provider.tumblr.com/pronouns") { }
                     }
 
-                    command("pr", "Test") {
+                    command(commandPrefix, "Test") {
                         subCommand("count", "Get a count of all known pronouns") { }
                         subCommand("example", "Give examples of your pronouns in sentences") { }
                         subCommand("add", "Add pronouns") {

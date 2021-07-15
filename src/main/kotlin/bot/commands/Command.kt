@@ -5,5 +5,5 @@ import dev.kord.core.entity.interaction.Interaction
 
 interface Command {
     @OptIn(KordPreview::class)
-    suspend fun runOn(interaction: Interaction)
+    suspend fun runOn(interaction: Interaction): Unit
 }

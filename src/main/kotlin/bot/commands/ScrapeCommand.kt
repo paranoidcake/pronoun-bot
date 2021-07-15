@@ -7,10 +7,10 @@ import dev.kord.core.entity.interaction.Interaction
 
 class ScrapeCommand(private val bot: PronounBot): Command {
     @OptIn(KordPreview::class)
-    override suspend fun runOn(interaction: Interaction) {
+    override suspend fun runOn(interaction: Interaction): Unit = with(bot) {
         val ack = interaction.acknowledgeEphemeral()
-        bot.pronouns.scrape()
-        bot.serializePronouns()
+        pronouns.scrape()
+        serializePronouns()
         ack.followUpEphemeral { content = "Scraping finished!" }
     }
 }
