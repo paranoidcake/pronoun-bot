@@ -1,9 +1,8 @@
 package bot
 
 import MalformedInputException
-import PronounEntry
 import PronounDictionary
-import Pronouns
+import PronounEntry
 import bot.commands.AddPronounCommand
 import bot.commands.Command
 import bot.commands.ScrapeCommand
@@ -15,7 +14,9 @@ import dev.kord.core.behavior.edit
 import dev.kord.core.entity.Guild
 import dev.kord.core.entity.Member
 import dev.kord.core.entity.Message
+import dev.kord.core.entity.Role
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toSet
 import java.io.File
@@ -33,22 +34,47 @@ class PronounBot(val kord: Kord) {
 
     val trackedChannels = resources.trackedChannels
 
-    suspend fun addRole(member: Member, guild: Guild, pronoun: PronounEntry) {
+    suspend fun addRole(member: Member, guild: Guild, pronoun: PronounEntry): Role? {
         val pronounsInUse = PronounDictionary(guild.roles.mapNotNull { PronounEntry.from(it.name) }.toSet())
 
-        member.edit {
-            val existingPronouns = pronounsInUse.toSet().filter { it.toString().contains(pronoun.toString()) || pronoun.toString().contains(it.toString()) }
-            when {
-                existingPronouns.size == 1 -> {
-                    val role = guild.roles.first { it.name ==  existingPronouns.first().toString() }
-                    roles?.add(role.id)
+        val existingPronouns = pronounsInUse.toSet().filter { it.toString().contains(pronoun.toString()) || pronoun.toString().contains(it.toString()) }
+        val memberRoles = member.roles.map { it.id }.toSet()
+        println("Existing pronouns: $existingPronouns")
+        when {
+            existingPronouns.size == 1 -> {
+                return when {
+                    pronoun.toString().contains(existingPronouns.first().toString()) -> {
+                        val role = guild.roles.first { it.name == existingPronouns.first().toString() }
+
+                        println("Role: $role")
+
+                        member.edit {
+                            roles = memberRoles.plus(role.id).toMutableSet()
+                        }
+
+                        role
+                    }
+                    else -> {
+                        TODO("Edit old role, and add new less ambiguous role")
+//                        val oldRole = guild.roles.first { it.name == existingPronouns.first().toString() }
+//                        val newRole = guild.createRole { name = pronoun.toString() }
+//
+//                        member.edit {
+//                            roles = memberRoles.plus(newRole.id).toMutableSet()
+//                        }
+                    }
                 }
-                existingPronouns.isEmpty() -> {
-                    val role = guild.createRole { name = pronoun.toString() }
-                    roles?.add(role.id)
-                }
-                else -> throw Exception("Ambiguous pronoun list")
             }
+            existingPronouns.isEmpty() -> {
+                val role = guild.createRole { name = "${pronoun.subjectPronoun}/${pronoun.objectPronoun}" }
+
+                member.edit {
+                    roles = memberRoles.plus(role.id).toMutableSet()
+                }
+
+                return role
+            }
+            else -> throw Exception("Ambiguous pronoun list")
         }
     }
 

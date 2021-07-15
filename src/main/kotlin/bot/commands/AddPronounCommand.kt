@@ -11,16 +11,22 @@ class AddPronounCommand(private val bot: PronounBot): Command {
     override suspend fun runOn(interaction: Interaction): Unit = with(bot) {
         val ack = interaction.acknowledgeEphemeral()
 
-        val target =
-            interaction.data.data.options.value?.first { it.name == "add" }?.values?.value?.first()?.value
+        try {
+            val target =
+                interaction.data.data.options.value?.first { it.name == "add" }?.values?.value?.first()?.value
 
-        val pronoun = PronounEntry.from(target as String) // TODO: Error checking
+            val pronoun = PronounEntry.from(target as String)!! // TODO: Error checking
 
-        val guild = bot.kord.getGuild(interaction.data.guildId.value!!)!!
-        val member = interaction.user.asMember(guild.id)
+            val guild = bot.kord.getGuild(interaction.data.guildId.value!!)!!
+            val member = interaction.user.asMember(guild.id)
 
-        addRole(member, guild, pronoun!!)
+            addRole(member, guild, pronoun)
 
-        ack.followUpEphemeral { content = "Your pronouns (`$pronoun`) were successfully added!" }
+            ack.followUpEphemeral { content = "Added pronouns `${bot.pronounDictionary.get(pronoun.toString())}` successfully" }
+
+        } catch (e: NotImplementedError) {
+            ack.followUpEphemeral { content = "Failed to add your pronouns! Reason:\n`${e.message}`" }
+        }
+
     }
 }

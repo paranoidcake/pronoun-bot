@@ -128,7 +128,7 @@ class Cli: CliktCommand() {
                         println("Interaction is not a known component, probably a command")
                         println(interaction.data.data)
 
-                        // TODO: I want to replace this all with a more functional system, which uses filters/forEach over the values rather than this hard to read mix
+                        // TODO: Replace this with the generated system
                         when (data.name.value) {
                             "owner" -> {
                                 when(data.options.value?.first()?.name) {
@@ -143,12 +143,15 @@ class Cli: CliktCommand() {
                                         interaction.acknowledgePublic().followUp {
                                             // TODO: Figure out how to make roles less ambiguous without being too clunky. User configured opt-ins could work
                                             content = try {
-                                                val pronoun =
-                                                    pronounDictionary.get(interaction.user.asMember(interaction.data.guildId.value!!).roles.first().name)
-                                                        ?.first()
-                                                pronoun?.exampleText()
+                                                val pronoun = pronounDictionary.get(
+                                                    interaction.user.asMember(interaction.data.guildId.value!!).roles.first().name
+                                                )!!.first()
+
+                                                pronoun.exampleText()
                                             } catch (e: NoSuchElementException) {
                                                 "No pronouns set!"
+                                            } catch (e: NullPointerException) {
+                                                e.toString() // TODO: Ask the user to report the error, this shouldn't ever occur
                                             }
                                         }
                                     }

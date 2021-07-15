@@ -1,8 +1,4 @@
-import bot.PronounBot
-import dev.kord.core.behavior.createRole
-import dev.kord.core.behavior.edit
-import dev.kord.core.entity.Guild
-import dev.kord.core.entity.Member
+import com.charleskorn.kaml.Yaml
 import it.skrape.core.htmlDocument
 import it.skrape.fetcher.HttpFetcher
 import it.skrape.fetcher.extractIt
@@ -11,8 +7,8 @@ import it.skrape.selects.eachText
 import it.skrape.selects.html5.div
 import it.skrape.selects.html5.h1
 import it.skrape.selects.html5.ul
-import kotlinx.coroutines.flow.*
 import kotlinx.serialization.Serializable
+import java.io.File
 
 data class Webpage(var httpStatusCode: Int = 0,
                    var httpStatusMessage: String = "",
@@ -26,7 +22,7 @@ class PronounDictionary() {
     private val set: MutableSet<PronounEntry> = mutableSetOf(
         PronounEntry("he", "him", "his", "his", "himself"),
         PronounEntry("she", "her", "hers", "hers", "herself"),
-        PronounEntry("they", "them", "they", "their", "themselves")
+        PronounEntry("they", "them", "their", "theirs", "theirself")
     )
 
     constructor(collection: Collection<PronounEntry>) : this() {
@@ -153,20 +149,20 @@ class PronounDictionary() {
 
     companion object {
         fun fetch(): PronounDictionary { // TODO: The dictionary needs to find the pronouns existing on the server, probably using this list
-            println("Warning: Fetching pronouns currently disabled while I decide on implementation")
-            return PronounDictionary()
+//            println("Warning: Fetching pronouns currently disabled while I decide on implementation")
+//            return PronounDictionary()
 
-//            val file = this::class.java.classLoader.getResource("pronouns.yaml")?.file
-//            return if (!this::class.java.classLoader.getResource("pronouns.yaml")?.file.isNullOrEmpty()) {
-//                val text = File(file!!).readText()
-//                if (text.isEmpty()) {
-//                    PronounDictionary().apply { scrape() }
-//                } else {
-//                    Yaml.default.decodeFromString(serializer(), text)
-//                }
-//            } else {
-//                PronounDictionary()
-//            }
+            val file = this::class.java.classLoader.getResource("pronouns.yaml")?.file
+            return if (!this::class.java.classLoader.getResource("pronouns.yaml")?.file.isNullOrEmpty()) {
+                val text = File(file!!).readText()
+                if (text.isEmpty()) {
+                    PronounDictionary().apply { scrape() }
+                } else {
+                    Yaml.default.decodeFromString(serializer(), text)
+                }
+            } else {
+                PronounDictionary()
+            }
         }
     }
 }
@@ -186,7 +182,7 @@ class PronounEntry(
 
         return "This morning, $subjectPronoun went to the park.\n" +
                 "I went with $objectPronoun.\n" +
-                "And $possessiveDeterminer bought $possessivePronoun frisbee.\n" +
+                "And $subjectPronoun bought $possessiveDeterminer frisbee.\n" +
                 "At least I think it was $possessivePronoun.\n" +
                 "By the end of the day, $subjectPronoun started throwing the frisbee to $reflexivePronoun."
     }
