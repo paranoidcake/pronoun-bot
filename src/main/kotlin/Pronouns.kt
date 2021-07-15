@@ -1,5 +1,8 @@
 import bot.PronounBot
-import com.charleskorn.kaml.Yaml
+import dev.kord.core.behavior.createRole
+import dev.kord.core.behavior.edit
+import dev.kord.core.entity.Guild
+import dev.kord.core.entity.Member
 import it.skrape.core.htmlDocument
 import it.skrape.fetcher.HttpFetcher
 import it.skrape.fetcher.extractIt
@@ -8,24 +11,16 @@ import it.skrape.selects.eachText
 import it.skrape.selects.html5.div
 import it.skrape.selects.html5.h1
 import it.skrape.selects.html5.ul
+import kotlinx.coroutines.flow.*
 import kotlinx.serialization.Serializable
-import java.io.File
 
 data class Webpage(var httpStatusCode: Int = 0,
                    var httpStatusMessage: String = "",
                    var allHeadings: List<String> = listOf(),
 )
 
-/**
- * Resolves and finds user pronouns
- */
-//class Pronouns(private val bot: PronounBot) {
-//
-//}
-
 @Serializable
-class PronounDictionary {
-    // TODO: Replace this with something that makes more sense
+class PronounDictionary() {
     // TODO: Remove hardcoded values
     @Serializable
     private val set: MutableSet<PronounEntry> = mutableSetOf(
@@ -33,6 +28,11 @@ class PronounDictionary {
         PronounEntry("she", "her", "hers", "hers", "herself"),
         PronounEntry("they", "them", "they", "their", "themselves")
     )
+
+    constructor(collection: Collection<PronounEntry>) : this() {
+        this.set.clear()
+        this.set.addAll(collection)
+    }
 
     fun scrape() {
         println("Scraping...")
@@ -61,6 +61,8 @@ class PronounDictionary {
 
         println("Found ${page.allHeadings.size} headings")
     }
+
+    fun toSet(): MutableSet<PronounEntry> = set
 
     fun get(slashSeparatedString: String): List<PronounEntry>? {
         val nouns = slashSeparatedString.split("/")
@@ -101,11 +103,11 @@ class PronounDictionary {
                 &&
             it.objectPronoun.lowercase() == objectPronoun.lowercase()
                 &&
-            it.possessiveDeterminer.lowercase() == possessiveDeterminer.lowercase()
+            it.possessiveDeterminer?.lowercase() == possessiveDeterminer.lowercase()
                 &&
-            it.possessivePronoun.lowercase() == possessivePronoun.lowercase()
+            it.possessivePronoun?.lowercase() == possessivePronoun.lowercase()
                 &&
-            it.reflexivePronoun.lowercase() == reflexivePronoun.lowercase()
+            it.reflexivePronoun?.lowercase() == reflexivePronoun.lowercase()
         }
     }
 
@@ -115,9 +117,9 @@ class PronounDictionary {
                     &&
                     it.objectPronoun.lowercase() == objectPronoun.lowercase()
                     &&
-                    it.possessiveDeterminer.lowercase() == possessiveDeterminer.lowercase()
+                    it.possessiveDeterminer?.lowercase() == possessiveDeterminer.lowercase()
                     &&
-                    it.reflexivePronoun.lowercase() == reflexivePronoun.lowercase()
+                    it.reflexivePronoun?.lowercase() == reflexivePronoun.lowercase()
         }.ifEmpty {
             null
         }
@@ -129,7 +131,7 @@ class PronounDictionary {
                 &&
             it.objectPronoun.lowercase() == objectPronoun.lowercase()
                 &&
-            it.possessiveDeterminer.lowercase() == possessiveDeterminer.lowercase()
+            it.possessiveDeterminer?.lowercase() == possessiveDeterminer.lowercase()
         }.ifEmpty {
             null
         }
@@ -150,18 +152,21 @@ class PronounDictionary {
     }
 
     companion object {
-        fun fetch(): PronounDictionary {
-            val file = this::class.java.classLoader.getResource("pronouns.yaml")?.file
-            return if (!this::class.java.classLoader.getResource("pronouns.yaml")?.file.isNullOrEmpty()) {
-                val text = File(file!!).readText()
-                if (text.isEmpty()) {
-                    PronounDictionary().apply { scrape() }
-                } else {
-                    Yaml.default.decodeFromString(serializer(), text)
-                }
-            } else {
-                PronounDictionary()
-            }
+        fun fetch(): PronounDictionary { // TODO: The dictionary needs to find the pronouns existing on the server, probably using this list
+            println("Warning: Fetching pronouns currently disabled while I decide on implementation")
+            return PronounDictionary()
+
+//            val file = this::class.java.classLoader.getResource("pronouns.yaml")?.file
+//            return if (!this::class.java.classLoader.getResource("pronouns.yaml")?.file.isNullOrEmpty()) {
+//                val text = File(file!!).readText()
+//                if (text.isEmpty()) {
+//                    PronounDictionary().apply { scrape() }
+//                } else {
+//                    Yaml.default.decodeFromString(serializer(), text)
+//                }
+//            } else {
+//                PronounDictionary()
+//            }
         }
     }
 }
@@ -170,11 +175,15 @@ class PronounDictionary {
 class PronounEntry(
     val subjectPronoun: String,
     val objectPronoun: String,
-    val possessiveDeterminer: String,
-    val possessivePronoun: String,
-    val reflexivePronoun: String)
+    val possessiveDeterminer: String?,
+    val possessivePronoun: String?,
+    val reflexivePronoun: String?)
 {
     fun exampleText(): String {
+        require(possessiveDeterminer != null && possessivePronoun != null && reflexivePronoun != null) {
+            "Not enough pronouns are stored to generate an example conjugation"
+        }
+
         return "This morning, $subjectPronoun went to the park.\n" +
                 "I went with $objectPronoun.\n" +
                 "And $possessiveDeterminer bought $possessivePronoun frisbee.\n" +
@@ -182,8 +191,23 @@ class PronounEntry(
                 "By the end of the day, $subjectPronoun started throwing the frisbee to $reflexivePronoun."
     }
 
+    fun toList(): List<String> {
+        return listOfNotNull(subjectPronoun, objectPronoun, possessiveDeterminer, possessivePronoun, reflexivePronoun)
+    }
+
+    fun countMatchingSegments(other: PronounEntry): Int {
+        require(other.reflexivePronoun != null && other.possessivePronoun != null && other.possessiveDeterminer != null) {
+            "The pronoun matched against must be fully defined"
+        }
+
+        return toList().zip(other.toList()).count { (segment, otherSegment) -> println("Comparing $segment to $otherSegment"); segment == otherSegment }
+    }
+
     override fun toString(): String {
-        return "Pronoun(subjectPronoun='$subjectPronoun', objectPronoun='$objectPronoun', possessiveDeterminer='$possessiveDeterminer', possessivePronoun='$possessivePronoun', reflexivePronoun='$reflexivePronoun')"
+        return "$subjectPronoun/$objectPronoun" +
+                if (possessiveDeterminer != null) "/$possessiveDeterminer" else "" +
+                if (possessivePronoun != null) "/$possessivePronoun" else "" +
+                if (reflexivePronoun != null) "/$reflexivePronoun" else ""
     }
 
     override fun equals(other: Any?): Boolean {
@@ -214,10 +238,12 @@ class PronounEntry(
         fun from(slashSeparatedString: String): PronounEntry? {
             val items = slashSeparatedString.split("/")
 
-            return if (items.size == 5) {
-                PronounEntry(items[0], items[1], items[2], items[3], items[4])
-            } else {
-                null
+            return when (items.size) {
+                5 -> PronounEntry(items[0], items[1], items[2], items[3], items[4])
+                4 -> PronounEntry(items[0], items[1], items[2], null, items[3])
+                3 -> PronounEntry(items[0], items[1], items[2], null, null)
+                2 -> PronounEntry(items[0], items[1], null, null, null)
+                else -> null
             }
         }
     }

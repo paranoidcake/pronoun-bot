@@ -18,6 +18,15 @@ class Cli: CliktCommand() {
 
     @OptIn(KordPreview::class)
     override fun run(): Unit = runBlocking {
+//        val result = PronounEntry.from("he/him")?.countMatchingSegments(PronounEntry.from("he/him/his/her/herself")!!)
+//        println(result)
+
+//        val dict = PronounDictionary(setOf(PronounEntry.from("he/him/one")!!, PronounEntry.from("he/him/two")!!))
+//        val pronoun = PronounEntry.from("he/him/her")!!
+//        val existing = dict.toSet().filter { it.toString().contains(pronoun.toString()) || pronoun.toString().contains(it.toString()) }
+//        println(existing)
+//        return@runBlocking
+
         val commandPrefix = "pr"
 
         PronounBot(token!!).apply {
@@ -129,13 +138,13 @@ class Cli: CliktCommand() {
                             }
                             "pr" -> {
                                 when(data.options.value?.first()?.name) {
-                                    "count" -> interaction.acknowledgeEphemeral().followUpEphemeral { content = "${pronouns.count()} known pronouns!" }
+                                    "count" -> interaction.acknowledgeEphemeral().followUpEphemeral { content = "${pronounDictionary.count()} known pronouns!" }
                                     "example" -> {
                                         interaction.acknowledgePublic().followUp {
                                             // TODO: Figure out how to make roles less ambiguous without being too clunky. User configured opt-ins could work
                                             content = try {
                                                 val pronoun =
-                                                    pronouns.get(interaction.user.asMember(interaction.data.guildId.value!!).roles.first().name)
+                                                    pronounDictionary.get(interaction.user.asMember(interaction.data.guildId.value!!).roles.first().name)
                                                         ?.first()
                                                 pronoun?.exampleText()
                                             } catch (e: NoSuchElementException) {
