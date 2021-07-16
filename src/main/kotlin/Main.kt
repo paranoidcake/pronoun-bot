@@ -132,8 +132,8 @@ class Cli: CliktCommand() {
                         when (data.name.value) {
                             "owner" -> {
                                 when(data.options.value?.first()?.name) {
-                                    "track-introductions" -> commands["track"]!!.runOn(interaction)
-                                    "scrape-pronouns" -> commands["scrape"]!!.runOn(interaction)
+                                    "track-introductions" -> commands["track"]!!.runOn(interaction).also { serializeSettings() }
+                                    "scrape-pronouns" -> commands["scrape"]!!.runOn(interaction).also { serializeDictionary() }
                                 }
                             }
                             "pr" -> {
@@ -151,11 +151,11 @@ class Cli: CliktCommand() {
                                             } catch (e: NoSuchElementException) {
                                                 "No pronouns set!"
                                             } catch (e: NullPointerException) {
-                                                e.toString() // TODO: Ask the user to report the error, this shouldn't ever occur
+                                                e.toString() // TODO: Ask the user to report the error? This shouldn't ever occur
                                             }
                                         }
                                     }
-                                    "add" -> commands["add-pronoun"]!!.runOn(interaction)
+                                    "add" -> commands["add-pronoun"]!!.runOn(interaction).also { serializePronouns(interaction.data.guildId.value!!) }
                                 }
                             }
                         }

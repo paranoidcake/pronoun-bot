@@ -7,7 +7,13 @@ import it.skrape.selects.eachText
 import it.skrape.selects.html5.div
 import it.skrape.selects.html5.h1
 import it.skrape.selects.html5.ul
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.io.File
 import java.io.FileNotFoundException
 
@@ -19,17 +25,16 @@ internal data class Webpage(var httpStatusCode: Int = 0,
 @Serializable
 class PronounDictionary() {
     // TODO: Remove hardcoded values
-    @Serializable
-    private val set: MutableSet<PronounEntry> = mutableSetOf(
+    private val pronounSet: MutableSet<PronounEntry> = mutableSetOf(
         PronounEntry("he", "him", "his", "his", "himself"),
         PronounEntry("she", "her", "hers", "hers", "herself"),
         PronounEntry("they", "them", "their", "theirs", "theirself")
     )
 
-    constructor(collection: Collection<PronounEntry>) : this() {
-        this.set.clear()
-        this.set.addAll(collection)
-    }
+//    constructor(collection: Collection<PronounEntry>) : this() {
+//        this.set.clear()
+//        this.set.addAll(collection)
+//    }
 
     fun scrape() {
         println("Scraping...")
@@ -43,7 +48,7 @@ class PronounDictionary() {
                         div {
                             withId = "pof"
                             it.allHeadings = h1 { findAll { eachText } }
-                            set.addAll(ul {
+                            pronounSet.addAll(ul {
                                 findAll {
                                     eachText.flatMap { text ->
                                         println(text); text.split(" ").map { PronounEntry.from(it) }
@@ -59,7 +64,7 @@ class PronounDictionary() {
         println("Found ${page.allHeadings.size} headings")
     }
 
-    fun toSet(): MutableSet<PronounEntry> = set
+    fun toSet(): MutableSet<PronounEntry> = pronounSet
 
     fun get(slashSeparatedString: String): List<PronounEntry>? {
         val nouns = slashSeparatedString.split("/")
@@ -95,7 +100,7 @@ class PronounDictionary() {
     }
 
     fun get(subjectPronoun: String, objectPronoun: String, possessiveDeterminer: String, possessivePronoun: String, reflexivePronoun: String): PronounEntry? {
-        return set.firstOrNull {
+        return pronounSet.firstOrNull {
             it.subjectPronoun.lowercase() == subjectPronoun.lowercase()
                 &&
             it.objectPronoun.lowercase() == objectPronoun.lowercase()
@@ -109,7 +114,7 @@ class PronounDictionary() {
     }
 
     fun get(subjectPronoun: String, objectPronoun: String, possessiveDeterminer: String, reflexivePronoun: String): List<PronounEntry>? {
-        return set.filter {
+        return pronounSet.filter {
             it.subjectPronoun.lowercase() == subjectPronoun.lowercase()
                     &&
                     it.objectPronoun.lowercase() == objectPronoun.lowercase()
@@ -123,7 +128,7 @@ class PronounDictionary() {
     }
 
     fun get(subjectPronoun: String, objectPronoun: String, possessiveDeterminer: String): List<PronounEntry>? {
-        return set.filter {
+        return pronounSet.filter {
             it.subjectPronoun.lowercase() == subjectPronoun.lowercase()
                 &&
             it.objectPronoun.lowercase() == objectPronoun.lowercase()
@@ -135,7 +140,7 @@ class PronounDictionary() {
     }
 
     fun get(subjectPronoun: String, objectPronoun: String): List<PronounEntry>? {
-        return set.filter {
+        return pronounSet.filter {
             it.subjectPronoun.lowercase() == subjectPronoun.lowercase()
                 &&
             it.objectPronoun.lowercase() == objectPronoun.lowercase()
@@ -145,7 +150,7 @@ class PronounDictionary() {
     }
 
     fun count(): Int {
-        return set.size
+        return pronounSet.size
     }
 
     companion object {
@@ -165,7 +170,7 @@ class PronounDictionary() {
     }
 }
 
-@Serializable
+@Serializable(with = PronounEntryAsStringSerializer::class)
 class PronounEntry(
     val subjectPronoun: String,
     val objectPronoun: String,
@@ -173,8 +178,12 @@ class PronounEntry(
     val possessivePronoun: String?,
     val reflexivePronoun: String?)
 {
+    fun isFullEntry(): Boolean {
+        return possessiveDeterminer != null && possessivePronoun != null && reflexivePronoun != null
+    }
+
     fun exampleText(): String {
-        require(possessiveDeterminer != null && possessivePronoun != null && reflexivePronoun != null) {
+        require(isFullEntry()) {
             "Not enough pronouns are stored to generate an example conjugation"
         }
 
@@ -185,23 +194,29 @@ class PronounEntry(
                 "By the end of the day, $subjectPronoun started throwing the frisbee to $reflexivePronoun."
     }
 
-    fun toList(): List<String> {
-        return listOfNotNull(subjectPronoun, objectPronoun, possessiveDeterminer, possessivePronoun, reflexivePronoun)
+    private fun toList(): List<String?> {
+        return listOf(subjectPronoun, objectPronoun, possessiveDeterminer, possessivePronoun, reflexivePronoun)
     }
 
+    /**
+     * @return The number of matching segments
+     */
     fun countMatchingSegments(other: PronounEntry): Int {
-        require(other.reflexivePronoun != null && other.possessivePronoun != null && other.possessiveDeterminer != null) {
-            "The pronoun matched against must be fully defined"
+        return toList().filterNotNull().zip(other.toList()).count { (segment, otherSegment) ->
+            segment == otherSegment
         }
-
-        return toList().zip(other.toList()).count { (segment, otherSegment) -> println("Comparing $segment to $otherSegment"); segment == otherSegment }
     }
+
+//    fun countMatchingSegments(other: PronounEntry): Int {
+//        require(other.isFullEntry()) {
+//            "The pronoun matched against must be fully defined"
+//        }
+//
+//        return toList().zip(other.toList()).count { (segment, otherSegment) -> println("Comparing $segment to $otherSegment"); segment == otherSegment }
+//    }
 
     override fun toString(): String {
-        return "$subjectPronoun/$objectPronoun" +
-                if (possessiveDeterminer != null) "/$possessiveDeterminer" else "" +
-                if (possessivePronoun != null) "/$possessivePronoun" else "" +
-                if (reflexivePronoun != null) "/$reflexivePronoun" else ""
+        return toList().filterNotNull().joinToString("/")
     }
 
     override fun equals(other: Any?): Boolean {
@@ -240,5 +255,18 @@ class PronounEntry(
                 else -> null
             }
         }
+    }
+}
+
+class PronounEntryAsStringSerializer : KSerializer<PronounEntry> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("PronounEntry", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: PronounEntry) {
+        encoder.encodeString(value.toString())
+    }
+
+    override fun deserialize(decoder: Decoder): PronounEntry {
+        val string = decoder.decodeString()
+        return PronounEntry.from(string)!!
     }
 }

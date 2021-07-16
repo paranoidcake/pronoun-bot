@@ -10,7 +10,6 @@ class ScrapeCommand(private val bot: PronounBot): Command {
     override suspend fun runOn(interaction: Interaction): Unit = with(bot) {
         val ack = interaction.acknowledgeEphemeral()
         pronounDictionary.scrape()
-        serializeDictionary()
         ack.followUpEphemeral { content = "Scraping finished!" }
     }
 }

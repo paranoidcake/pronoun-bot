@@ -16,10 +16,9 @@ import dev.kord.core.entity.Guild
 import dev.kord.core.entity.Member
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.Role
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.toSet
+import kotlinx.coroutines.flow.*
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.serializer
 import java.io.File
 
 class PronounBot(val kord: Kord) {
@@ -32,50 +31,45 @@ class PronounBot(val kord: Kord) {
         "add-pronoun" to AddPronounCommand(this)
     )
 
-    val trackedChannels = globalResources.trackedChannels
+    val trackedChannels: MutableMap<Snowflake, Snowflake> = globalResources.trackedChannels
 
-    suspend fun addRole(member: Member, guild: Guild, pronoun: PronounEntry): Role? {
-        val pronounsInUse = PronounDictionary(guild.roles.mapNotNull { PronounEntry.from(it.name) }.toSet())
+    private val guildMemberPronouns = globalResources.guildMemberPronouns
 
-        val existingPronouns = pronounsInUse.toSet().filter { it.toString().contains(pronoun.toString()) || pronoun.toString().contains(it.toString()) }
-        val memberRoles = member.roles.map { it.id }.toSet()
-        println("Existing pronouns: $existingPronouns")
-        when {
-            existingPronouns.size == 1 -> {
-                return when {
-                    pronoun.toString().contains(existingPronouns.first().toString()) -> {
-                        val role = guild.roles.first { it.name == existingPronouns.first().toString() }
-
-                        println("Role: $role")
-
-                        member.edit {
-                            roles = memberRoles.plus(role.id).toMutableSet()
-                        }
-
-                        role
-                    }
-                    else -> {
-                        TODO("Edit old role, and add new less ambiguous role")
-//                        val oldRole = guild.roles.first { it.name == existingPronouns.first().toString() }
-//                        val newRole = guild.createRole { name = pronoun.toString() }
-//
-//                        member.edit {
-//                            roles = memberRoles.plus(newRole.id).toMutableSet()
-//                        }
-                    }
-                }
-            }
-            existingPronouns.isEmpty() -> {
-                val role = guild.createRole { name = "${pronoun.subjectPronoun}/${pronoun.objectPronoun}" }
-
-                member.edit {
-                    roles = memberRoles.plus(role.id).toMutableSet()
-                }
-
-                return role
-            }
-            else -> throw Exception("Ambiguous pronoun list")
+    /**
+     * Add a [PronounEntry] to a [Member] as a [Role].
+     *
+     * Creates the role if it does not already exist.
+     * Adds the [PronounEntry] to the map of user ids to pronoun entries.
+     *
+     * @return The [Role] added
+     */
+    suspend fun addRole(member: Member, guild: Guild, pronoun: PronounEntry): Role {
+        require(pronoun.isFullEntry()) {
+            TODO("Add roles for partial pronoun listings")
         }
+
+        // TODO: Check member roles and update our pronouns in case of an edit made without the bot
+
+        val role: Role = guild.roles
+            .filter { PronounEntry.from(it.name) != null }
+            .toSet()
+            .maxByOrNull { PronounEntry.from(it.name)!!.countMatchingSegments(pronoun) }
+            ?:
+            guild.createRole { name = "${pronoun.subjectPronoun}/${pronoun.objectPronoun}" }
+
+        val memberRoles = member.roles.map { it.id }.toSet()
+
+        member.edit {
+            roles = memberRoles.plus(
+                role.id
+            ).toMutableSet()
+        }
+
+        guildMemberPronouns.putIfAbsent(guild.id, mutableMapOf())
+        guildMemberPronouns[guild.id]!!.putIfAbsent(member.id, mutableSetOf())
+        guildMemberPronouns[guild.id]!![member.id]!!.add(pronoun)
+
+        return role
     }
 
     /*
@@ -107,7 +101,7 @@ class PronounBot(val kord: Kord) {
         }
     }
 
-    // TODO: Since these serialize funcs are getting called relatively often, it should probably be optimised at some point
+    // TODO: Make this lazy
     fun serializeSettings() {
         if (trackedChannels.isNotEmpty()) {
             File("./assets").mkdir()
@@ -117,11 +111,22 @@ class PronounBot(val kord: Kord) {
         }
     }
 
+    // TODO: Make this lazy
     fun serializeDictionary() {
         File("./assets").mkdir()
         val dictionaryFile = File("./assets/pronounDictionary.yaml")
         println("Writing pronouns to ${dictionaryFile.path}")
         dictionaryFile.writeText(Yaml.default.encodeToString(PronounDictionary.serializer(), pronounDictionary))
+    }
+
+    // TODO: Make this lazy
+    fun serializePronouns(guildId: Snowflake) {
+        File("./assets/guilds").mkdirs()
+        val pronounsFile = File("./assets/guilds/${guildId.value}.yaml")
+        println("Writing current user pronouns to ${pronounsFile.path}")
+
+        val pronounListSerializer: KSerializer<Map<Snowflake, Set<PronounEntry>>> = serializer()
+        pronounsFile.writeText(Yaml.default.encodeToString(pronounListSerializer, guildMemberPronouns[guildId] as Map<Snowflake, Set<PronounEntry>>))
     }
 
     companion object {

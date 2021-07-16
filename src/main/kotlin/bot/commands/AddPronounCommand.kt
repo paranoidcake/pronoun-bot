@@ -1,6 +1,5 @@
 package bot.commands
 
-import PronounEntry
 import bot.PronounBot
 import dev.kord.common.annotation.KordPreview
 import dev.kord.core.behavior.interaction.followUpEphemeral
@@ -15,14 +14,22 @@ class AddPronounCommand(private val bot: PronounBot): Command {
             val target =
                 interaction.data.data.options.value?.first { it.name == "add" }?.values?.value?.first()?.value
 
-            val pronoun = PronounEntry.from(target as String)!! // TODO: Error checking
+            val variants = bot.pronounDictionary.get(target as String)
 
-            val guild = bot.kord.getGuild(interaction.data.guildId.value!!)!!
-            val member = interaction.user.asMember(guild.id)
+            if (variants == null || variants.isEmpty()) {
+                TODO("Implement flow for adding new pronouns to the dictionary")
+            } else if (variants.size == 1) {
+                val pronoun = variants.first()
 
-            addRole(member, guild, pronoun)
+                val guild = bot.kord.getGuild(interaction.data.guildId.value!!)!!
+                val member = interaction.user.asMember(guild.id)
 
-            ack.followUpEphemeral { content = "Added pronouns `${bot.pronounDictionary.get(pronoun.toString())}` successfully" }
+                addRole(member, guild, pronoun)
+
+                ack.followUpEphemeral { content = "Added pronouns `${bot.pronounDictionary.get(pronoun.toString())}` successfully" }
+            } else {
+                TODO("Implement flow for picking a variant from known pronouns")
+            }
 
         } catch (e: NotImplementedError) {
             ack.followUpEphemeral { content = "Failed to add your pronouns! Reason:\n`${e.message}`" }
