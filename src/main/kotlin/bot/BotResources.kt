@@ -52,5 +52,5 @@ class BotResources(
 data class MemberResources(val options: MutableSet<PronounOption> = mutableSetOf(), val pronouns: MutableSet<PronounEntry> = mutableSetOf())
 
 enum class PronounOption(val description: String) {
-    OnlyNickname("Display your pronouns using only your nickname")
+    OnlyUseNicknames("Display your pronouns using only your nickname")
 }

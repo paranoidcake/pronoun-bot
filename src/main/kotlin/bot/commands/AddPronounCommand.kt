@@ -82,7 +82,7 @@ class AddPronounCommand(private val bot: PronounBot): Command {
                 val guild = bot.kord.getGuild(interaction.data.guildId.value!!)!!
                 val member = interaction.user.asMember(guild.id)
 
-                if (bot.getMemberResources(interaction.user.id)?.options?.contains(PronounOption.OnlyNickname) == true) {
+                if (bot.getMemberResources(interaction.user.id)?.options?.contains(PronounOption.OnlyUseNicknames) == true) {
                     TODO("Implement setting nicknames")
                 } else {
                     member.addRole(pronoun)

@@ -72,6 +72,7 @@ class Cli: CliktCommand() {
                 }
             }.collect()
 
+            // TODO: Rewrite this
             kord.on<MessageCreateEvent> {
                 if (message.channelId == trackedChannels[guildId] && message.author?.isBot == false) {
                     try {
@@ -97,17 +98,6 @@ class Cli: CliktCommand() {
                                 roles?.addAll(roleList)
                             }
                         }
-
-                        /**
-                         *  TODO: Allow users to opt into alternate naming style
-                         *
-                         *  TODO: Fix nicknames appending onto themselves
-                        */
-//                        val author = message.author?.asMember(guildId!!)!!
-//                        val pronoun = variants.first()
-//                        author.edit {
-//                            nickname = "[${pronoun.subjectPronoun}/${pronoun.objectPronoun}] " + author.displayName
-//                        }
                     } catch (e: MalformedInputException) {
                         message.author?.getDmChannel()?.createMessage {
                             embed {

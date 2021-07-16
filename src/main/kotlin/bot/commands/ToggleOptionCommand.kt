@@ -13,8 +13,10 @@ class ToggleOptionCommand(private val bot: PronounBot): Command {
 
         val ordinal = interaction.data.data.options.value?.first()?.values?.value?.first()?.value as String
 
-        val newValue = bot.toggleMemberOption(interaction.user.id, PronounOption.values()[ordinal.toInt()])
+        val option = PronounOption.values()[ordinal.toInt()]
 
-        ack.followUpEphemeral { content = "Successfully set option to $newValue" }
+        val newValue = bot.toggleMemberOption(interaction.user.id, option)
+
+        ack.followUpEphemeral { content = "Successfully set ${option.name} to $newValue" }
     }
 }
