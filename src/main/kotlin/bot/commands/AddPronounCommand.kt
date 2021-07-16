@@ -10,6 +10,7 @@ import dev.kord.core.behavior.interaction.followUpEphemeral
 import dev.kord.core.entity.Member
 import dev.kord.core.entity.Role
 import dev.kord.core.entity.interaction.Interaction
+import dev.kord.rest.request.KtorRequestException
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toSet
@@ -52,13 +53,15 @@ class AddPronounCommand(private val bot: PronounBot): Command {
         require(pronoun.isFullEntry()) {
             TODO("Nicknames for partial pronoun listings")
         }
+
         val prefix = "[${pronoun.subjectPronoun}/${pronoun.objectPronoun}] "
 
         val oldNickname = if (nickname?.startsWith(prefix) == true) {
-            nickname?.substring(prefix.length - 1)
+            asMember().displayName.substring(prefix.length - 1)
         } else {
-            nickname
+            asMember().displayName
         }
+
         edit {
             nickname = prefix + oldNickname
         }
@@ -83,7 +86,8 @@ class AddPronounCommand(private val bot: PronounBot): Command {
                 val member = interaction.user.asMember(guild.id)
 
                 if (bot.getMemberResources(interaction.user.id)?.options?.contains(PronounOption.OnlyUseNicknames) == true) {
-                    TODO("Implement setting nicknames")
+                    member.changeNick(pronoun)
+                    bot.addMemberPronoun(interaction.user.id, pronoun)
                 } else {
                     member.addRole(pronoun)
                     bot.addMemberPronoun(interaction.user.id, pronoun)
@@ -95,6 +99,8 @@ class AddPronounCommand(private val bot: PronounBot): Command {
             }
 
         } catch (e: NotImplementedError) {
+            ack.followUpEphemeral { content = "Failed to add your pronouns! Reason:\n`${e.message}`" }
+        } catch (e: KtorRequestException) {
             ack.followUpEphemeral { content = "Failed to add your pronouns! Reason:\n`${e.message}`" }
         }
 
