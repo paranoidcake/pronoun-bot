@@ -34,6 +34,8 @@ class Cli: CliktCommand() {
 
         PronounBot(token!!).apply {
             /**
+             * TODO: Restructure commands to be less scoped
+             *
              * TODO: Replace with a global application command
              *
              * TODO: Automatically generate these with reflection or something, where we define the response behaviour
@@ -158,7 +160,7 @@ class Cli: CliktCommand() {
                                             }
                                         }
                                     }
-                                    "add" -> AddPronounCommand(this@apply).runOn(interaction).also { serializePronouns(interaction.data.guildId.value!!) }
+                                    "add" -> AddPronounCommand(this@apply).runOn(interaction).also { serializeMembers(interaction.data.guildId.value!!) }
                                 }
                             }
                         }

@@ -114,13 +114,13 @@ class PronounBot(val kord: Kord) {
     }
 
     // TODO: Make this lazy
-    fun serializePronouns(guildId: Snowflake) {
+    fun serializeMembers(guildId: Snowflake) {
         File("./assets/guilds").mkdirs()
         val pronounsFile = File("./assets/guilds/${guildId.value}.yaml")
         println("Writing current user pronouns to ${pronounsFile.path}")
 
-        val pronounListSerializer: KSerializer<Map<Snowflake, Set<PronounEntry>>> = serializer()
-        pronounsFile.writeText(Yaml.default.encodeToString(pronounListSerializer, guildMemberPronouns[guildId] as Map<Snowflake, Set<PronounEntry>>))
+        val pronounListSerializer: KSerializer<Map<Snowflake, MemberResources>> = serializer()
+        pronounsFile.writeText(Yaml.default.encodeToString(pronounListSerializer, guildMemberPronouns[guildId]!!))
     }
 
     companion object {
