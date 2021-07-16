@@ -13,7 +13,7 @@ import java.io.FileNotFoundException
 @Serializable
 class BotResources(
     @Serializable val trackedChannels: MutableMap<Snowflake, Snowflake> = mutableMapOf(),
-    @Transient val guildMemberPronouns: MutableMap<Snowflake, MutableMap<Snowflake, MutableSet<PronounEntry>>> = mutableMapOf()
+    @Transient val guildMemberPronouns: MutableMap<Snowflake, MutableMap<Snowflake, MemberResources>> = mutableMapOf()
 ) {
     companion object {
         fun fetch(): BotResources? {
@@ -29,16 +29,14 @@ class BotResources(
                 null
             }
 
-            val guildMapPairs: MutableMap<Snowflake, MutableMap<Snowflake, MutableSet<PronounEntry>>> = File("./assets/guilds/").walk().mapNotNull { file ->
+            val guildMapPairs: MutableMap<Snowflake, MutableMap<Snowflake, MemberResources>> = File("./assets/guilds/").walk().mapNotNull { file ->
                 if (file.isDirectory) return@mapNotNull null
 
                 val content = file.readText()
 
                 if (content.isNotBlank()) {
-                    val mapSerializer = MapSerializer(Snowflake.serializer(), SetSerializer(PronounEntry.serializer()))
-                    Snowflake(file.nameWithoutExtension) to Yaml.default.decodeFromString(mapSerializer, content).map {
-                        it.key to it.value.toMutableSet()
-                    }.toMap().toMutableMap()
+                    val mapSerializer = MapSerializer(Snowflake.serializer(), MemberResources.serializer())
+                    Snowflake(file.nameWithoutExtension) to Yaml.default.decodeFromString(mapSerializer, content).toMap().toMutableMap()
                 } else {
                     Snowflake(file.nameWithoutExtension) to mutableMapOf()
                 }
@@ -51,4 +49,11 @@ class BotResources(
             }
         }
     }
+}
+
+@Serializable
+data class MemberResources(val options: MutableSet<PronounOptions> = mutableSetOf(), val pronouns: MutableSet<PronounEntry> = mutableSetOf())
+
+enum class PronounOptions {
+    UseNicknames
 }

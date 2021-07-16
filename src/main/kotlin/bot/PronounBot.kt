@@ -25,12 +25,6 @@ class PronounBot(val kord: Kord) {
     val pronounDictionary = PronounDictionary.fetch()
     private val globalResources = BotResources.fetch() ?: BotResources()
 
-    val commands = mapOf<String, Command>(
-        "scrape" to ScrapeCommand(this),
-        "track" to TrackCommand(this),
-        "add-pronoun" to AddPronounCommand(this)
-    )
-
     val trackedChannels: MutableMap<Snowflake, Snowflake> = globalResources.trackedChannels
 
     private val guildMemberPronouns = globalResources.guildMemberPronouns
@@ -66,8 +60,8 @@ class PronounBot(val kord: Kord) {
         }
 
         guildMemberPronouns.putIfAbsent(guild.id, mutableMapOf())
-        guildMemberPronouns[guild.id]!!.putIfAbsent(member.id, mutableSetOf())
-        guildMemberPronouns[guild.id]!![member.id]!!.add(pronoun)
+        guildMemberPronouns[guild.id]!!.putIfAbsent(member.id, MemberResources())
+        guildMemberPronouns[guild.id]!![member.id]!!.pronouns.add(pronoun)
 
         return role
     }

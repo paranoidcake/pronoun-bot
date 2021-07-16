@@ -1,4 +1,7 @@
 import bot.PronounBot
+import bot.commands.AddPronounCommand
+import bot.commands.ScrapeCommand
+import bot.commands.TrackCommand
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import dev.kord.common.annotation.KordPreview
@@ -132,8 +135,8 @@ class Cli: CliktCommand() {
                         when (data.name.value) {
                             "owner" -> {
                                 when(data.options.value?.first()?.name) {
-                                    "track-introductions" -> commands["track"]!!.runOn(interaction).also { serializeSettings() }
-                                    "scrape-pronouns" -> commands["scrape"]!!.runOn(interaction).also { serializeDictionary() }
+                                    "track-introductions" -> TrackCommand(this@apply).runOn(interaction).also { serializeSettings() }
+                                    "scrape-pronouns" -> ScrapeCommand(this@apply).runOn(interaction).also { serializeDictionary() }
                                 }
                             }
                             "pr" -> {
@@ -155,7 +158,7 @@ class Cli: CliktCommand() {
                                             }
                                         }
                                     }
-                                    "add" -> commands["add-pronoun"]!!.runOn(interaction).also { serializePronouns(interaction.data.guildId.value!!) }
+                                    "add" -> AddPronounCommand(this@apply).runOn(interaction).also { serializePronouns(interaction.data.guildId.value!!) }
                                 }
                             }
                         }
