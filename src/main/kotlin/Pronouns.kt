@@ -26,7 +26,7 @@ internal data class Webpage(var httpStatusCode: Int = 0,
 class PronounDictionary() {
     // TODO: Remove hardcoded values
     private val pronounSet: MutableSet<PronounEntry> = mutableSetOf(
-        PronounEntry("he", "him", "his", "his", "himself"),
+//        PronounEntry("he", "him", "his", "his", "himself"),
         PronounEntry("she", "her", "hers", "hers", "herself"),
         PronounEntry("they", "them", "their", "theirs", "theirself")
     )
@@ -51,8 +51,15 @@ class PronounDictionary() {
                             pronounSet.addAll(ul {
                                 findAll {
                                     eachText.flatMap { text ->
-                                        println(text); text.split(" ").map { PronounEntry.from(it) }
-                                    }.filterNotNull()
+                                        println(text); text.split(" ").mapNotNull {
+                                            val entry = PronounEntry.from(it)
+                                            if (entry?.isFullEntry() == true) {
+                                                entry
+                                            } else {
+                                                null
+                                            }
+                                        }
+                                    }
                                 }
                             })
                         }

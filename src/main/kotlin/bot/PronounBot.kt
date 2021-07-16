@@ -3,20 +3,10 @@ package bot
 import MalformedInputException
 import PronounDictionary
 import PronounEntry
-import bot.commands.AddPronounCommand
-import bot.commands.Command
-import bot.commands.ScrapeCommand
-import bot.commands.TrackCommand
 import com.charleskorn.kaml.Yaml
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
-import dev.kord.core.behavior.createRole
-import dev.kord.core.behavior.edit
-import dev.kord.core.entity.Guild
-import dev.kord.core.entity.Member
 import dev.kord.core.entity.Message
-import dev.kord.core.entity.Role
-import kotlinx.coroutines.flow.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.serializer
 import java.io.File
@@ -27,43 +17,28 @@ class PronounBot(val kord: Kord) {
 
     val trackedChannels: MutableMap<Snowflake, Snowflake> = globalResources.trackedChannels
 
-    private val guildMemberPronouns = globalResources.guildMemberPronouns
+    private val memberResources = globalResources.memberResources
+
+    fun getMemberResources(userId: Snowflake): MemberResources? {
+        return memberResources[userId]
+    }
+
+    fun addMemberPronoun(userId: Snowflake, pronoun: PronounEntry) {
+        memberResources.putIfAbsent(userId, MemberResources())
+        memberResources[userId]!!.pronouns.add(pronoun)
+    }
 
     /**
-     * Add a [PronounEntry] to a [Member] as a [Role].
-     *
-     * Creates the role if it does not already exist.
-     * Adds the [PronounEntry] to the map of user ids to pronoun entries.
-     *
-     * @return The [Role] added
+     * @return The new state of the option
      */
-    suspend fun addRole(member: Member, guild: Guild, pronoun: PronounEntry): Role {
-        require(pronoun.isFullEntry()) {
-            TODO("Add roles for partial pronoun listings")
+    fun toggleMemberOption(userId: Snowflake, option: PronounOption): Boolean {
+        memberResources.putIfAbsent(userId, MemberResources())
+        val added = memberResources[userId]!!.options.add(option)
+        if (!added) {
+            memberResources[userId]!!.options.remove(option)
         }
 
-        // TODO: Check member roles and update our pronouns in case of an edit made without the bot
-
-        val role: Role = guild.roles
-            .filter { PronounEntry.from(it.name) != null }
-            .toSet()
-            .maxByOrNull { PronounEntry.from(it.name)!!.countMatchingSegments(pronoun) }
-            ?:
-            guild.createRole { name = "${pronoun.subjectPronoun}/${pronoun.objectPronoun}" }
-
-        val memberRoles = member.roles.map { it.id }.toSet()
-
-        member.edit {
-            roles = memberRoles.plus(
-                role.id
-            ).toMutableSet()
-        }
-
-        guildMemberPronouns.putIfAbsent(guild.id, mutableMapOf())
-        guildMemberPronouns[guild.id]!!.putIfAbsent(member.id, MemberResources())
-        guildMemberPronouns[guild.id]!![member.id]!!.pronouns.add(pronoun)
-
-        return role
+        return added
     }
 
     /*
@@ -114,13 +89,12 @@ class PronounBot(val kord: Kord) {
     }
 
     // TODO: Make this lazy
-    fun serializeMembers(guildId: Snowflake) {
-        File("./assets/guilds").mkdirs()
-        val pronounsFile = File("./assets/guilds/${guildId.value}.yaml")
+    fun serializeMembers(userId: Snowflake) {
+        File("./assets/members").mkdirs()
+        val pronounsFile = File("./assets/members/${userId.value}.yaml")
         println("Writing current user pronouns to ${pronounsFile.path}")
 
-        val pronounListSerializer: KSerializer<Map<Snowflake, MemberResources>> = serializer()
-        pronounsFile.writeText(Yaml.default.encodeToString(pronounListSerializer, guildMemberPronouns[guildId]!!))
+        pronounsFile.writeText(Yaml.default.encodeToString(MemberResources.serializer(), memberResources[userId]!!))
     }
 
     companion object {

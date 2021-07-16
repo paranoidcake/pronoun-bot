@@ -1,10 +1,13 @@
 import bot.PronounBot
+import bot.PronounOption
 import bot.commands.AddPronounCommand
 import bot.commands.ScrapeCommand
+import bot.commands.ToggleOptionCommand
 import bot.commands.TrackCommand
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import dev.kord.common.annotation.KordPreview
+import dev.kord.common.entity.Choice
 import dev.kord.common.entity.ComponentType
 import dev.kord.core.behavior.*
 import dev.kord.core.behavior.channel.createMessage
@@ -57,6 +60,12 @@ class Cli: CliktCommand() {
                         subCommand("add", "Add pronouns") {
                             string("pronouns", "A slash separated list of your pronouns") {
                                 required = true
+                            }
+                        }
+                        subCommand("toggle-option", "Toggles an option on / off") {
+                            string("option", "The option to toggle") {
+                                required = true
+                                choices = PronounOption.values().map { Choice.StringChoice("${it.name}: ${it.description}", it.ordinal.toString()) }.toMutableList()
                             }
                         }
                     }
@@ -160,7 +169,8 @@ class Cli: CliktCommand() {
                                             }
                                         }
                                     }
-                                    "add" -> AddPronounCommand(this@apply).runOn(interaction).also { serializeMembers(interaction.data.guildId.value!!) }
+                                    "add" -> AddPronounCommand(this@apply).runOn(interaction).also { serializeMembers(interaction.user.id) }
+                                    "toggle-option" -> ToggleOptionCommand(this@apply).runOn(interaction).also { serializeMembers(interaction.user.id) }
                                 }
                             }
                         }
