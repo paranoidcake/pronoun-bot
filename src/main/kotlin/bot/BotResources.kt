@@ -4,6 +4,7 @@ import com.charleskorn.kaml.Yaml
 import dev.kord.common.entity.Snowflake
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.io.FileNotFoundException
 
 @Serializable
 class BotResources {
@@ -11,12 +12,17 @@ class BotResources {
     val trackedChannels = hashMapOf<Snowflake, Snowflake>()
 
     companion object {
-        fun fetch(): BotResources {
-            return if (this::class.java.classLoader.getResource("settings.yaml")?.file.isNullOrEmpty()) {
-                BotResources()
-            } else {
-                val file = File(this::class.java.classLoader.getResource("settings.yaml")!!.file)
-                Yaml.default.decodeFromString(serializer(), file.readText())
+        fun fetch(): BotResources? {
+            return try {
+                val content = File("./assets/settings.yaml").readText()
+
+                if (content.isNotBlank()) {
+                    Yaml.default.decodeFromString(serializer(), content)
+                } else {
+                    null
+                }
+            } catch (e: FileNotFoundException) {
+                null
             }
         }
     }

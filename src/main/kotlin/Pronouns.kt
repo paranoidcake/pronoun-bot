@@ -9,8 +9,9 @@ import it.skrape.selects.html5.h1
 import it.skrape.selects.html5.ul
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.io.FileNotFoundException
 
-data class Webpage(var httpStatusCode: Int = 0,
+internal data class Webpage(var httpStatusCode: Int = 0,
                    var httpStatusMessage: String = "",
                    var allHeadings: List<String> = listOf(),
 )
@@ -148,20 +149,17 @@ class PronounDictionary() {
     }
 
     companion object {
-        fun fetch(): PronounDictionary { // TODO: The dictionary needs to find the pronouns existing on the server, probably using this list
-//            println("Warning: Fetching pronouns currently disabled while I decide on implementation")
-//            return PronounDictionary()
+        fun fetch(): PronounDictionary {
+            return try {
+                val text = File("./assets/pronounDictionary.yaml").readText()
 
-            val file = this::class.java.classLoader.getResource("pronouns.yaml")?.file
-            return if (!this::class.java.classLoader.getResource("pronouns.yaml")?.file.isNullOrEmpty()) {
-                val text = File(file!!).readText()
                 if (text.isEmpty()) {
                     PronounDictionary().apply { scrape() }
                 } else {
                     Yaml.default.decodeFromString(serializer(), text)
                 }
-            } else {
-                PronounDictionary()
+            } catch (e: FileNotFoundException) {
+                PronounDictionary().apply { scrape() }
             }
         }
     }

@@ -8,6 +8,7 @@ import bot.commands.Command
 import bot.commands.ScrapeCommand
 import bot.commands.TrackCommand
 import com.charleskorn.kaml.Yaml
+import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.createRole
 import dev.kord.core.behavior.edit
@@ -23,16 +24,15 @@ import java.io.File
 
 class PronounBot(val kord: Kord) {
     val pronounDictionary = PronounDictionary.fetch()
-    private val resources = BotResources.fetch()
+    private val globalResources = BotResources.fetch() ?: BotResources()
 
-    // Generate this list
     val commands = mapOf<String, Command>(
         "scrape" to ScrapeCommand(this),
         "track" to TrackCommand(this),
         "add-pronoun" to AddPronounCommand(this)
     )
 
-    val trackedChannels = resources.trackedChannels
+    val trackedChannels = globalResources.trackedChannels
 
     suspend fun addRole(member: Member, guild: Guild, pronoun: PronounEntry): Role? {
         val pronounsInUse = PronounDictionary(guild.roles.mapNotNull { PronounEntry.from(it.name) }.toSet())
@@ -110,20 +110,18 @@ class PronounBot(val kord: Kord) {
     // TODO: Since these serialize funcs are getting called relatively often, it should probably be optimised at some point
     fun serializeSettings() {
         if (trackedChannels.isNotEmpty()) {
-            val resDir = this::class.java.classLoader.getResource("./")!!.toURI()
-
-            val settingsFile = File(resDir.path + "settings.yaml")
+            File("./assets").mkdir()
+            val settingsFile = File("./assets/settings.yaml")
             println("Writing settings to ${settingsFile.path}")
-            settingsFile.writeText(Yaml.default.encodeToString(BotResources.serializer(), resources))
+            settingsFile.writeText(Yaml.default.encodeToString(BotResources.serializer(), globalResources))
         }
     }
 
-    fun serializePronouns() {
-        val resDir = this::class.java.classLoader.getResource("./")!!.toURI()
-
-        val pronounsFile = File(resDir.path + "pronouns.yaml")
-        println("Writing pronouns to ${pronounsFile.path}")
-        pronounsFile.writeText(Yaml.default.encodeToString(PronounDictionary.serializer(), pronounDictionary))
+    fun serializeDictionary() {
+        File("./assets").mkdir()
+        val dictionaryFile = File("./assets/pronounDictionary.yaml")
+        println("Writing pronouns to ${dictionaryFile.path}")
+        dictionaryFile.writeText(Yaml.default.encodeToString(PronounDictionary.serializer(), pronounDictionary))
     }
 
     companion object {
