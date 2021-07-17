@@ -8,11 +8,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import dev.kord.common.annotation.KordPreview
 import dev.kord.common.entity.Choice
-import dev.kord.common.entity.ComponentType
 import dev.kord.core.behavior.*
 import dev.kord.core.behavior.channel.createMessage
 import dev.kord.core.behavior.interaction.followUp
 import dev.kord.core.behavior.interaction.followUpEphemeral
+import dev.kord.core.entity.interaction.*
 import dev.kord.core.event.interaction.InteractionCreateEvent
 import dev.kord.core.event.message.MessageCreateEvent
 import dev.kord.core.on
@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.*
 class Cli: CliktCommand() {
     private val token: String? by option(help="Discord bot user token")
 
-    @OptIn(KordPreview::class)
+    @KordPreview
     override fun run(): Unit = runBlocking {
 //        val result = PronounEntry.from("he/him")?.countMatchingSegments(PronounEntry.from("he/him/his/her/herself")!!)
 //        println(result)
@@ -123,48 +123,52 @@ class Cli: CliktCommand() {
             }
 
             kord.on<InteractionCreateEvent> {
-                val data = interaction.data.data
-                when (data.componentType.value) {
-                    ComponentType.ActionRow -> {}
-                    ComponentType.Button -> {}
-                    ComponentType.SelectMenu -> {}
-                    else -> {
-                        println("Interaction is not a known component, probably a command")
-                        println(interaction.data.data)
+                when(interaction) {
+                    is GuildInteraction -> {
+                        val interaction = interaction as GuildInteraction
 
-                        // TODO: Replace this with the generated system
-                        when (data.name.value) {
-                            "owner" -> {
-                                when(data.options.value?.first()?.name) {
-                                    "track-introductions" -> TrackCommand(this@apply).runOn(interaction).also { serializeSettings() }
-                                    "scrape-pronouns" -> ScrapeCommand(this@apply).runOn(interaction).also { serializeDictionary() }
-                                }
-                            }
-                            "pr" -> {
-                                when(data.options.value?.first()?.name) {
-                                    "count" -> interaction.acknowledgeEphemeral().followUpEphemeral { content = "${pronounDictionary.count()} known pronouns!" }
-                                    "example" -> {
-                                        interaction.acknowledgePublic().followUp {
-                                            // TODO: Figure out how to make roles less ambiguous without being too clunky. User configured opt-ins could work
-                                            content = try {
-                                                val pronoun = pronounDictionary.get(
-                                                    interaction.user.asMember(interaction.data.guildId.value!!).roles.first().name
-                                                )!!.first()
-
-                                                pronoun.exampleText()
-                                            } catch (e: NoSuchElementException) {
-                                                "No pronouns set!"
-                                            } catch (e: NullPointerException) {
-                                                e.toString() // TODO: Ask the user to report the error? This shouldn't ever occur
+                        when(interaction.command) {
+                            is RootCommand -> {}
+                            is SubCommand -> {
+                                val command = interaction.command as SubCommand
+                                when(command.rootName) {
+                                    "owner" -> {
+                                        when(command.name) {
+                                            "track-introductions" -> TrackCommand(this@apply).runOn(interaction).also {
+                                                serializeSettings()
+                                            }
+                                            "scrape-pronouns" -> ScrapeCommand(this@apply).runOn(interaction).also {
+                                                serializeDictionary()
                                             }
                                         }
                                     }
-                                    "add" -> AddPronounCommand(this@apply).runOn(interaction).also { serializeMembers(interaction.user.id) }
-                                    "toggle-option" -> ToggleOptionCommand(this@apply).runOn(interaction).also { serializeMembers(interaction.user.id) }
+                                    "pr" -> {
+                                        when(command.name) {
+                                            "count" -> interaction.acknowledgeEphemeral().followUpEphemeral { content = "${pronounDictionary.count()} known pronouns!" }
+                                            "example" -> {
+                                                interaction.acknowledgePublic().followUp {
+                                                    // TODO: Allow users to pick from their list / any pronouns they want
+                                                    val pronouns = getMemberResources(interaction.user.id)?.pronouns?.first()
+
+                                                    content = pronouns?.exampleText() ?: "Could not get your pronouns! Reason:\n`No pronouns stored for this user`"
+                                                }
+                                            }
+                                            "add" -> AddPronounCommand(this@apply).runOn(interaction).also {
+                                                serializeMembers(interaction.user.id)
+                                            }
+                                            "toggle-option" -> ToggleOptionCommand(this@apply).runOn(interaction).also {
+                                                serializeMembers(interaction.user.id)
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            is GroupCommand -> {}
                         }
                     }
+                    is ButtonInteraction -> {}
+                    is SelectMenuInteraction -> {}
+                    is DmInteraction -> {}
                 }
             }
 

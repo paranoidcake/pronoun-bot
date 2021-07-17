@@ -7,8 +7,6 @@ import com.charleskorn.kaml.Yaml
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.entity.Message
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.serializer
 import java.io.File
 
 class PronounBot(val kord: Kord) {
