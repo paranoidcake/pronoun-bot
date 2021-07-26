@@ -6,9 +6,10 @@ import dev.kord.core.behavior.interaction.followUpEphemeral
 import dev.kord.core.entity.interaction.GuildInteraction
 
 @KordPreview
-class TrackCommand(private val bot: PronounBot): Command {
-    override suspend fun runOn(interaction: GuildInteraction): Unit = with(bot) {
-        trackedChannels[interaction.guildId] = interaction.channelId
+class TrackCommand(rootName: String, name: String): SubCommand(rootName, name) {
+    override suspend fun runOn(bot: PronounBot, interaction: GuildInteraction) {
+        bot.trackedChannels[interaction.guildId] = interaction.channelId
         interaction.acknowledgeEphemeral().followUpEphemeral { content = "Now tracking ${interaction.channel.mention}" }
+        bot.serializeSettings()
     }
 }

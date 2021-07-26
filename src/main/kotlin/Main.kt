@@ -65,12 +65,19 @@ class Cli: CliktCommand() {
                         subCommand("toggle-option", "Toggles an option on / off") {
                             string("option", "The option to toggle") {
                                 required = true
-                                choices = PronounOption.values().map { Choice.StringChoice("${it.name}: ${it.description}", it.ordinal.toString()) }.toMutableList()
+                                choices = PronounOption.values().map { Choice.StringChoice("${it.displayName}", it.ordinal.toString()) }.toMutableList()
                             }
                         }
                     }
                 }
             }.collect()
+
+            commands.addAll(listOf(
+                AddPronounCommand(commandPrefix, "add"),
+                ToggleOptionCommand(commandPrefix, "toggle-option"),
+                TrackCommand("owner", "track-introductions"),
+                ScrapeCommand("owner", "scrape-pronouns")
+            ))
 
             // TODO: Rewrite this
             kord.on<MessageCreateEvent> {
@@ -119,56 +126,6 @@ class Cli: CliktCommand() {
                             }
                         }
                     }
-                }
-            }
-
-            kord.on<InteractionCreateEvent> {
-                when(interaction) {
-                    is GuildInteraction -> {
-                        val interaction = interaction as GuildInteraction
-
-                        when(interaction.command) {
-                            is RootCommand -> {}
-                            is SubCommand -> {
-                                val command = interaction.command as SubCommand
-                                when(command.rootName) {
-                                    "owner" -> {
-                                        when(command.name) {
-                                            "track-introductions" -> TrackCommand(this@apply).runOn(interaction).also {
-                                                serializeSettings()
-                                            }
-                                            "scrape-pronouns" -> ScrapeCommand(this@apply).runOn(interaction).also {
-                                                serializeDictionary()
-                                            }
-                                        }
-                                    }
-                                    "pr" -> {
-                                        when(command.name) {
-                                            "count" -> interaction.acknowledgeEphemeral().followUpEphemeral { content = "${pronounDictionary.count()} known pronouns!" }
-                                            "example" -> {
-                                                interaction.acknowledgePublic().followUp {
-                                                    // TODO: Allow users to pick from their list / any pronouns they want
-                                                    val pronouns = getMemberResources(interaction.user.id)?.pronouns?.first()
-
-                                                    content = pronouns?.exampleText() ?: "Could not get your pronouns! Reason:\n`No pronouns stored for this user`"
-                                                }
-                                            }
-                                            "add" -> AddPronounCommand(this@apply).runOn(interaction).also {
-                                                serializeMembers(interaction.user.id)
-                                            }
-                                            "toggle-option" -> ToggleOptionCommand(this@apply).runOn(interaction).also {
-                                                serializeMembers(interaction.user.id)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            is GroupCommand -> {}
-                        }
-                    }
-                    is ButtonInteraction -> {}
-                    is SelectMenuInteraction -> {}
-                    is DmInteraction -> {}
                 }
             }
 

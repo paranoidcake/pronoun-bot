@@ -4,9 +4,13 @@ import MalformedInputException
 import PronounDictionary
 import PronounEntry
 import com.charleskorn.kaml.Yaml
+import dev.kord.common.annotation.KordPreview
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.entity.Message
+import dev.kord.core.entity.interaction.*
+import dev.kord.core.event.interaction.InteractionCreateEvent
+import dev.kord.core.on
 import java.io.File
 
 class PronounBot(val kord: Kord) {
@@ -16,6 +20,9 @@ class PronounBot(val kord: Kord) {
     val trackedChannels: MutableMap<Snowflake, Snowflake> = globalResources.trackedChannels
 
     private val memberResources = globalResources.memberResources
+
+    @OptIn(KordPreview::class)
+    val commands = mutableListOf<bot.commands.SubCommand>()
 
     fun getMemberResources(userId: Snowflake): MemberResources? {
         return memberResources[userId]
@@ -96,8 +103,38 @@ class PronounBot(val kord: Kord) {
     }
 
     companion object {
+        @OptIn(KordPreview::class)
         suspend inline operator fun invoke(token: String): PronounBot {
-            return PronounBot(Kord(token))
+            val kord = Kord(token)
+
+            val bot = PronounBot(kord)
+
+            kord.on<InteractionCreateEvent> {
+                when(interaction) {
+                    is GuildInteraction -> {
+                        val interaction = interaction as GuildInteraction
+
+                        when(val interactionCommand = interaction.command) {
+                            is RootCommand -> {}
+                            is SubCommand -> {
+                                bot.commands.first { command ->
+                                    if (interactionCommand.rootName == command.rootName) {
+                                        interactionCommand.name == command.name
+                                    } else {
+                                        false
+                                    }
+                                }.runOn(bot, interaction)
+                            }
+                            is GroupCommand -> {}
+                        }
+                    }
+                    is ButtonInteraction -> {}
+                    is SelectMenuInteraction -> {}
+                    is DmInteraction -> {}
+                }
+            }
+
+            return bot
         }
     }
 }

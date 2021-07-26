@@ -51,6 +51,9 @@ class BotResources(
 @Serializable
 data class MemberResources(val options: MutableSet<PronounOption> = mutableSetOf(), val pronouns: MutableSet<PronounEntry> = mutableSetOf())
 
-enum class PronounOption(val description: String) {
-    OnlyUseNicknames("Display your pronouns using only your nickname")
+enum class PronounOption(description: String) {
+    OnlyUseNicknames("Display your pronouns using only your nickname");
+
+    val displayName: String
+        get() = name.replace("[A-Z]".toRegex(), "$1 ")
 }

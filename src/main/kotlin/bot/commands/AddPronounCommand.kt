@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toSet
 
 @KordPreview
-class AddPronounCommand(private val bot: PronounBot): Command {
+class AddPronounCommand(rootName: String, name: String) : SubCommand(rootName, name) {
     /**
      * Add a [PronounEntry] to a [Member] as a [Role].
      *
@@ -68,7 +68,7 @@ class AddPronounCommand(private val bot: PronounBot): Command {
         }
     }
 
-    override suspend fun runOn(interaction: GuildInteraction): Unit = with(bot) {
+    override suspend fun runOn(bot: PronounBot, interaction: GuildInteraction) {
         val ack = interaction.acknowledgeEphemeral()
 
         try {
@@ -103,5 +103,6 @@ class AddPronounCommand(private val bot: PronounBot): Command {
             ack.followUpEphemeral { content = "Failed to add your pronouns! Reason:\n`${e.message}`" }
         }
 
+        bot.serializeMembers(interaction.user.id)
     }
 }
